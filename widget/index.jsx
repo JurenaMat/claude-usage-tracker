@@ -1,7 +1,9 @@
-// Claude Usage Board — desktop widget for Übersicht. Recounts local Claude Code logs every 15 minutes.
+// Claude Usage Tracker — desktop widget for Übersicht. Recounts local Claude Code logs every 15 minutes.
 // Click it to open the full dashboard.
 import { run } from "uebersicht";
-export const command = "/usr/bin/python3 -I \"$HOME/.claude/usage-board/build.py\" \"$HOME/.claude/usage-board/widget.json\" --html \"$HOME/.claude/usage-board/dashboard.html\" >/dev/null && cat \"$HOME/.claude/usage-board/widget.json\"";
+// install.sh replaces __BOARD__ with the folder it installed to.
+const BOARD = "__BOARD__";
+export const command = `CLAUDE_CONFIG_DIR="${BOARD}/.." /usr/bin/python3 -I "${BOARD}/build.py" "${BOARD}/widget.json" --html "${BOARD}/dashboard.html" >/dev/null && cat "${BOARD}/widget.json"`;
 export const refreshFrequency = 15 * 60 * 1000;
 
 export const className = `
@@ -54,8 +56,8 @@ export const render = ({ output, error }) => {
   const tot = data.totals[0];
   const weekMin = week.reduce((s, w) => s + w.m, 0);
   return (
-    <div onClick={() => run("open \"$HOME/.claude/usage-board/dashboard.html\"")}>
-      <div className="hd"><span className="ttl">Claude today</span><span className="muted">{today.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</span></div>
+    <div onClick={() => run(`open "${BOARD}/dashboard.html"`)}>
+      <div className="hd"><span className="ttl">Claude today</span><span className="muted">{today.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}</span></div>
       <div className="row">
         <div><div className="big">{t.est ? "—" : dur(t.m)}</div><div className="lab">in the app</div></div>
         <div><div className="big">{dur(t.a)}</div><div className="lab">working</div></div>
@@ -66,7 +68,7 @@ export const render = ({ output, error }) => {
           <div className="bar" key={i} title={dur(w.m)}><div className={"fill" + (i === 6 ? " today" : "") + (w.est ? " est" : "")} style={{ height: Math.max(2, (w.m / max) * 56) + "px" }} /></div>
         ))}
       </div>
-      <div className="dl">{week.map((w, i) => <span key={i}>{w.d.toLocaleDateString("en-GB", { weekday: "narrow" })}</span>)}</div>
+      <div className="dl">{week.map((w, i) => <span key={i}>{w.d.toLocaleDateString(undefined, { weekday: "narrow" })}</span>)}</div>
       <div className="ft">
         <span className="muted">Artifacts today: {t.ac} new · {t.ae} edited</span>
         <span className="muted">Peak {peak ? String(peak.hour).padStart(2, "0") + ":00" : "—"}</span>

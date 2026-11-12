@@ -1,4 +1,4 @@
-# Claude Usage Board
+# Claude Usage Tracker
 
 A small, private dashboard of how you use Claude Code: tokens, time, artifacts, tools and models, plus a widget for your Mac desktop.
 
@@ -6,7 +6,7 @@ Everything is read from the logs Claude Code already keeps on your computer. Not
 
 ## What you get
 
-- **A dashboard page** (`~/.claude/usage-board/dashboard.html`), refreshed every hour:
+- **A dashboard page** (`~/.claude/usage-tracker/dashboard.html`), refreshed every hour:
   - tokens per day, by model, by folder, and by weekday and hour
   - artifacts created and edited each day
   - working time per day, and your typical day hour by hour
@@ -19,8 +19,8 @@ Everything is read from the logs Claude Code already keeps on your computer. Not
 
 ```bash
 brew install --cask ubersicht          # optional, for the desktop widget
-git clone https://github.com/YOUR-NAME/claude-usage-board.git
-cd claude-usage-board && ./install.sh
+git clone https://github.com/YOUR-NAME/claude-usage-tracker.git
+cd claude-usage-tracker && ./install.sh
 ```
 
 Skip the time-in-the-app tracker with `./install.sh --no-focus`. Run `./install.sh` again to update.
@@ -50,7 +50,7 @@ python3 src/build.py usage.json --html dashboard.html
 The dashboard shows your session titles and folder names. Before you share a screenshot, rebuild without titles:
 
 ```bash
-python3 ~/.claude/usage-board/build.py --html ~/Desktop/usage.html --no-titles
+python3 ~/.claude/usage-tracker/build.py --html ~/Desktop/usage.html --no-titles
 ```
 
 ## Files

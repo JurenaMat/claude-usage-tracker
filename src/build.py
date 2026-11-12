@@ -1,18 +1,18 @@
-"""Claude Usage Board: counts your Claude Code usage from the logs on this computer.
+"""Claude Usage Tracker: counts your Claude Code usage from the logs on this computer.
 
-    python3 -I build.py                      # writes ~/.claude/usage-board/claude-usage.json
+    python3 -I build.py                      # writes ~/.claude/usage-tracker/claude-usage.json
     python3 -I build.py OUT.json             # writes the data somewhere else
     python3 -I build.py --html OUT.html      # also writes a self-contained dashboard page
 
 Reads only local files: ~/.claude/projects/**/*.jsonl (or $CLAUDE_CONFIG_DIR/projects) and,
-if the focus tracker is installed, ~/.claude/usage-board/focus.log. Sends nothing anywhere.
+if the focus tracker is installed, ~/.claude/usage-tracker/focus.log. Sends nothing anywhere.
 """
 import argparse, json, glob, collections, os, re, sys
 from datetime import datetime
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG = os.environ.get('CLAUDE_CONFIG_DIR') or os.path.expanduser('~/.claude')
 ROOT = os.path.join(CONFIG, 'projects')
-BOARD = os.path.join(CONFIG, 'usage-board')
+BOARD = os.path.join(CONFIG, 'usage-tracker')
 ap = argparse.ArgumentParser(description='Count Claude Code usage from local logs.')
 ap.add_argument('out', nargs='?', default=os.path.join(BOARD, 'claude-usage.json'), help='where to write the JSON data')
 ap.add_argument('--html', help='also write a self-contained dashboard page here')
@@ -120,7 +120,7 @@ for day in sorted(set(D) | set(act_day) | set(app_day)):
                      total=v['in'] + v['out'] + v['cr'] + v['cc'], replies=v['msgs'],
                      artifacts=len(art_created[day] | art_edited[day]), artifacts_created=len(art_created[day]), artifacts_edited=len(art_edited[day] - art_created[day]),
                      active_minutes=round(act_day.get(day, 0) / 60),
-                     app_minutes=app_day.get(day) if tracking_since and day >= tracking_since else None))
+                     app_minutes=app_day.get(day, 0) if tracking_since and day >= tracking_since else None))
 top = sorted((s for s in sess.values() if s['tok']), key=lambda s: -s['tok'])[:8]
 names_by = {id(s): titles.get(k) for k, s in sess.items()}
 out = dict(
