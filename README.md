@@ -19,7 +19,7 @@ Everything is read from the logs Claude Code already keeps on your computer. Not
 
 ```bash
 brew install --cask ubersicht          # optional, for the desktop widget
-git clone https://github.com/YOUR-NAME/claude-usage-tracker.git
+git clone https://github.com/JurenaMat/claude-usage-tracker.git
 cd claude-usage-tracker && ./install.sh
 ```
 
