@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Usage Board</title>
+<style>
+/* Layout: one column of cards, summary first, detail last. */
+:root {
+  --bg: #f6f4f0; --panel: #ffffff; --fg: #1f1d1a; --muted: #6d675f; --line: #e4dfd7; --grid: #ece8e1;
+  --c1: #c2703d; --c2: #3d6fb6; --c3: #4f8a6b; --c4: #a8a29a;
+  --sans: -apple-system, "SF Pro Text", "Segoe UI", "Helvetica Neue", sans-serif;
+  --serif: "New York", "Iowan Old Style", Georgia, serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #17181c; --panel: #1f2126; --fg: #efece6; --muted: #a39d94; --line: #2f3238; --grid: #2a2d33;
+    --c1: #e08a55; --c2: #78a2e0; --c3: #7cc29c; --c4: #6f6b66; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 var(--sans); }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 32px max(16px, env(safe-area-inset-right)) 48px max(16px, env(safe-area-inset-left)); display: flex; flex-direction: column; gap: 24px; }
+h1 { font: 400 2.2rem/1.1 var(--serif); margin: 0; text-wrap: balance; }
+h2 { font-size: 1rem; font-weight: 600; margin: 0; }
+.lede { color: var(--muted); max-width: 68ch; margin: 8px 0 0; }
+.sub { color: var(--muted); font-size: 12px; margin: 0; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.tile, .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+.tile .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.tile .v { display: block; font: 400 2rem/1.1 var(--serif); white-space: nowrap; font-variant-numeric: tabular-nums; margin-top: 4px; }
+.tile .n { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
+.card { display: flex; flex-direction: column; gap: 8px; }
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.chart { position: relative; min-height: 150px; }
+.chart svg { display: block; width: 100%; overflow: visible; }
+.chart text { fill: var(--muted); font: 11px var(--sans); }
+.chart .lbl { fill: var(--fg); }
+.tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 6px 18px rgba(0,0,0,.15); border-radius: 8px; padding: 6px 10px; font-size: 12px; white-space: nowrap; z-index: 2; }
+.tip b { display: block; }
+.key { display: inline-flex; align-items: center; gap: 4px; margin-left: 10px; }
+.sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.fact { margin: 0; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); }
+.fact b { display: block; color: var(--fg); font: 400 1.6rem/1.2 var(--serif); font-variant-numeric: tabular-nums; }
+.tw { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+th { font-size: 12px; font-weight: 600; color: var(--muted); }
+.num { text-align: right; }
+details summary { cursor: pointer; color: var(--muted); }
+details p { color: var(--muted); max-width: 68ch; }
+footer { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Claude Usage Board</h1>
+    <p class="lede" id="lede">—</p>
+  </header>
+  <section class="tiles" id="tiles"></section>
+  <section class="card"><h2>Tokens per day</h2><p class="sub">All tokens each day: what you sent, what Claude wrote, and context re-read from cache.</p><div class="chart" id="c-daily"></div></section>
+  <section class="card"><h2>Artifacts per day</h2><p class="sub">Different artifacts each day. <span class="key"><i class="sw" style="background:var(--c2)"></i>Created</span><span class="key"><i class="sw" style="background:var(--c4)"></i>Edited (made on an earlier day)</span></p><div class="chart" id="c-arts"></div></section>
+  <section class="card"><h2>Time per day</h2><p class="sub"><span class="key" style="margin-left:0"><i class="sw" style="background:var(--c3)"></i>Working: a message or tool step at least every 5 minutes</span><span class="key"><i class="sw" style="background:var(--c1)"></i>In the app: Claude in front and you at the computer</span></p><div class="chart" id="c-time"></div></section>
+  <section class="card"><h2>Your typical day</h2><p class="sub">Average working minutes in each hour of the day. Peak: <b id="peak">—</b>.</p><div class="chart" id="c-hourly"></div></section>
+  <section class="card"><h2>When you work with Claude</h2><p class="sub">Tokens by weekday and hour. Darker means busier.</p><div class="chart" id="c-heat"></div></section>
+  <section class="grid3">
+    <div class="card"><h2>By model</h2><div class="chart" id="c-models"></div></div>
+    <div class="card"><h2>By folder</h2><div class="chart" id="c-projects"></div></div>
+    <div class="card"><h2>Most used tools</h2><div class="chart" id="c-tools"></div></div>
+  </section>
+  <section><h2>Fun facts</h2><div class="facts" id="facts"></div></section>
+  <section class="card"><h2>Heaviest sessions</h2><div class="tw"><table><thead><tr><th>Session</th><th>Folder</th><th class="num">Tokens</th><th class="num">Replies</th><th class="num">Working</th><th>Started</th></tr></thead><tbody id="sessions"></tbody></table></div></section>
+  <details><summary>How these numbers are counted</summary>
+    <p>Everything comes from the Claude Code logs on this computer (the Claude desktop app's Code tab and the claude command-line tool). Chats on claude.ai and the phone apps are not in these logs, and Claude Code keeps about 30 days of history. Each reply is counted once, including replies from helper agents. Cache reads are context Claude has already seen and re-reads cheaply, which is why totals look large. "Working" adds up gaps of 5 minutes or less between steps. "In the app" comes from the optional focus tracker, which checks once a minute whether Claude is the app in front and you have used the keyboard or mouse in the last 5 minutes; it has no history before it was installed. Nothing on this page leaves your computer.</p>
+  </details>
+  <footer id="foot"></footer>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+const DATA = /*__DATA__*/null;
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmt = (n) => (n == null || isNaN(n)) ? '—' : d3.format('.3~s')(+n).replace('G', 'B');
+const int = d3.format(',');
+const dur = (m) => (m == null || isNaN(m)) ? '—' : (m >= 60 ? Math.floor(m / 60) + 'h ' + String(Math.round(m % 60)).padStart(2, '0') + 'm' : Math.round(m) + 'm');
+const day = (s, f = '%-d %b') => d3.utcFormat(f)(new Date(s));
+const hh = (h) => String(h).padStart(2, '0') + ':00';
+function el(tag, attrs = {}, text) { const e = document.createElement(tag); Object.assign(e, attrs); if (text != null) e.textContent = text; return e; }
+
+function tipFor(box) { const t = el('div', {className: 'tip', hidden: true}); box.appendChild(t); return t; }
+function showTip(box, tip, ev, lines) {
+  tip.replaceChildren(...lines.map((l, i) => el(i ? 'div' : 'b', {}, l))); tip.hidden = false;
+  const r = box.getBoundingClientRect(); let x = ev.clientX - r.left + 12;
+  if (x + tip.offsetWidth > r.width) x = ev.clientX - r.left - tip.offsetWidth - 12;
+  tip.style.left = Math.max(0, x) + 'px'; tip.style.top = (ev.clientY - r.top + 12) + 'px';
+}
+
+// Vertical bars over days or hours. series: [{key, color}] stacked bottom-up.
+function bars(id, rows, {x, series, yfmt = fmt, tickFilter = () => true, xlabel, tip, H = 170, aria}) {
+  const box = document.getElementById(id); box.replaceChildren();
+  const W = box.clientWidth || 600, m = {t: 12, r: 8, b: 24, l: 8};
+  const svg = d3.select(box).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', aria);
+  const total = (d) => d3.sum(series, (s) => +d[s.key] || 0);
+  const y = d3.scaleLinear().domain([0, d3.max(rows, total) || 1]).nice().range([H - m.b, m.t]);
+  const ticks = y.ticks(4).filter(tickFilter);
+  const yt = svg.append('g'); yt.selectAll('text').data(ticks).join('text').attr('y', (v) => y(v) - 3).text(yfmt);
+  m.l = (d3.max(yt.selectAll('text').nodes(), (n) => n.getComputedTextLength()) || 20) + 8;
+  svg.append('g').selectAll('line').data(ticks).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y).attr('y2', y).style('stroke', css('--grid'));
+  const xs = d3.scaleBand().domain(rows.map(x)).range([m.l, W - m.r]).padding(0.2);
+  series.forEach((s, i) => {
+    const base = (d) => d3.sum(series.slice(0, i), (p) => +d[p.key] || 0);
+    svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (d) => xs(x(d))).attr('width', xs.bandwidth())
+      .attr('y', (d) => y(base(d) + (+d[s.key] || 0))).attr('height', (d) => y(base(d)) - y(base(d) + (+d[s.key] || 0))).attr('rx', 2).style('fill', css(s.color));
+  });
+  const step = Math.ceil(rows.length / Math.max(1, Math.floor((W - m.l) / 56)));
+  svg.append('g').selectAll('text').data(rows.filter((d, i) => i % step === 0)).join('text').attr('x', (d) => xs(x(d)) + xs.bandwidth() / 2).attr('y', H - 6).attr('text-anchor', 'middle').text(xlabel);
+  const t = tipFor(box);
+  svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (d) => xs(x(d)) - xs.step() * xs.padding() / 2).attr('width', xs.step()).attr('y', 0).attr('height', H).style('fill', 'transparent')
+    .on('pointermove', (ev, d) => showTip(box, t, ev, tip(d))).on('pointerleave', () => { t.hidden = true; });
+  return {svg, xs, y};
+}
+
+// Grouped bars: two series side by side per day.
+function pairs(id, rows, a, b, aria) {
+  const box = document.getElementById(id); box.replaceChildren();
+  const W = box.clientWidth || 600, H = 170, m = {t: 12, r: 8, b: 24, l: 8};
+  const svg = d3.select(box).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', aria);
+  const y = d3.scaleLinear().domain([0, Math.max(60, d3.max(rows, (d) => Math.max(+d[a] || 0, +d[b] || 0)))]).range([H - m.b, m.t]);
+  const max = y.domain()[1], stepH = max > 360 ? 120 : 60, ticks = d3.range(0, max + 1, stepH);
+  const yt = svg.append('g'); yt.selectAll('text').data(ticks).join('text').attr('y', (v) => y(v) - 3).text((v) => v / 60 + 'h');
+  m.l = (d3.max(yt.selectAll('text').nodes(), (n) => n.getComputedTextLength()) || 20) + 8;
+  svg.append('g').selectAll('line').data(ticks).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y).attr('y2', y).style('stroke', css('--grid'));
+  const xs = d3.scaleBand().domain(rows.map((d) => d.date)).range([m.l, W - m.r]).padding(0.2);
+  const half = xs.bandwidth() / 2;
+  [[a, '--c3', 0], [b, '--c1', half]].forEach(([k, c, off]) => svg.append('g').selectAll('rect').data(rows.filter((d) => d[k] != null)).join('rect')
+    .attr('x', (d) => xs(d.date) + off).attr('width', half - 1).attr('y', (d) => y(+d[k])).attr('height', (d) => y(0) - y(+d[k])).attr('rx', 2).style('fill', css(c)));
+  const step = Math.ceil(rows.length / Math.max(1, Math.floor((W - m.l) / 56)));
+  svg.append('g').selectAll('text').data(rows.filter((d, i) => i % step === 0)).join('text').attr('x', (d) => xs(d.date) + half).attr('y', H - 6).attr('text-anchor', 'middle').text((d) => day(d.date));
+  const t = tipFor(box);
+  svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (d) => xs(d.date) - xs.step() * xs.padding() / 2).attr('width', xs.step()).attr('y', 0).attr('height', H).style('fill', 'transparent')
+    .on('pointermove', (ev, d) => showTip(box, t, ev, [day(d.date, '%a %-d %b'), dur(d[a]) + ' working', d[b] == null ? 'In the app: not tracked yet' : dur(d[b]) + ' in the app'])).on('pointerleave', () => { t.hidden = true; });
+}
+
+function hbars(id, rows, key, val, unit, vfmt) {
+  const box = document.getElementById(id); box.replaceChildren();
+  const W = box.clientWidth || 300, bh = 22, H = rows.length * bh;
+  const svg = d3.select(box).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', unit + ' by ' + key);
+  const labels = svg.append('g').selectAll('text').data(rows).join('text').attr('class', 'lbl').attr('y', (d, i) => i * bh + 15).text((d) => d[key]);
+  const lw = Math.min(W * 0.5, (d3.max(labels.nodes(), (n) => n.getComputedTextLength()) || 60) + 10);
+  labels.each(function (d) { let t = String(d[key]); while (this.getComputedTextLength() > lw - 10 && t.length > 4) { t = t.slice(0, -2); this.textContent = t + '…'; } });
+  const vals = svg.append('g').selectAll('text').data(rows).join('text').attr('y', (d, i) => i * bh + 15).attr('x', W).attr('text-anchor', 'end').text((d) => vfmt(d[val]));
+  const vw = (d3.max(vals.nodes(), (n) => n.getComputedTextLength()) || 30) + 8;
+  const x = d3.scaleLinear().domain([0, d3.max(rows, (d) => d[val]) || 1]).range([0, Math.max(10, W - lw - vw)]);
+  svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', lw).attr('y', (d, i) => i * bh + 4).attr('height', bh - 8).attr('rx', 2).attr('width', (d) => Math.max(1, x(d[val]))).style('fill', css('--c1'));
+}
+
+function heat(id, rows) {
+  const box = document.getElementById(id); box.replaceChildren();
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], W = box.clientWidth || 600, m = {l: 34, t: 2, b: 20, r: 2};
+  const cw = (W - m.l - m.r) / 24, ch = Math.max(12, Math.min(22, cw)), H = m.t + ch * 7 + m.b;
+  const map = new Map(rows.map((d) => [d.weekday + d.hour, d.tokens])), max = d3.max(rows, (d) => d.tokens) || 1;
+  const svg = d3.select(box).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Tokens by weekday and hour');
+  const cells = []; days.forEach((wd, i) => { for (let h = 0; h < 24; h++) cells.push({wd, i, h, v: map.get(wd + h) || 0}); });
+  const t = tipFor(box);
+  svg.append('g').selectAll('rect').data(cells).join('rect').attr('x', (d) => m.l + d.h * cw + 1).attr('y', (d) => m.t + d.i * ch + 1).attr('width', cw - 2).attr('height', ch - 2).attr('rx', 2)
+    .style('fill', (d) => d.v ? css('--c1') : css('--grid')).style('fill-opacity', (d) => d.v ? 0.15 + 0.85 * Math.sqrt(d.v / max) : 1)
+    .on('pointermove', (ev, d) => showTip(box, t, ev, [d.wd + ' ' + hh(d.h), fmt(d.v) + ' tokens'])).on('pointerleave', () => { t.hidden = true; });
+  svg.append('g').selectAll('text').data(days).join('text').attr('y', (d, i) => m.t + i * ch + ch / 2 + 4).text((d) => d);
+  svg.append('g').selectAll('text').data([0, 6, 12, 18]).join('text').attr('x', (h) => m.l + h * cw + cw / 2).attr('y', H - 4).attr('text-anchor', 'middle').text(hh);
+}
+
+function render() {
+  if (!DATA) { document.getElementById('lede').textContent = 'No data yet. Run build.py with --html to fill this page.'; return; }
+  const T = DATA.totals[0], daily = DATA.daily;
+  document.getElementById('lede').textContent = `Claude Code on this computer, ${day(T.first_day)} to ${day(T.last_day)} (${T.days_active} active days). ${fmt(T.tokens)} tokens in all, ${d3.format('.0%')(T.cache_read / T.tokens)} of them context re-read from cache.`;
+  const tiles = [['Tokens', fmt(T.tokens), 'sent, written and re-read'], ['Working time', dur(T.active_hours * 60), 'you or Claude at work'],
+    ['In the app', T.tracking_since ? dur(T.app_hours * 60) : 'off', T.tracking_since ? 'since ' + day(T.tracking_since) : 'focus tracker not installed'],
+    ['Sessions', int(T.sessions), 'separate conversations'], ['Your prompts', int(T.prompts), 'messages you typed'],
+    ['Artifacts', int(T.artifacts), 'different pages created or edited']];
+  document.getElementById('tiles').replaceChildren(...tiles.map(([k, v, n]) => { const d = el('div', {className: 'tile'}); d.append(el('span', {className: 'k'}, k), el('span', {className: 'v'}, v), el('p', {className: 'n'}, n)); return d; }));
+
+  bars('c-daily', daily, {x: (d) => d.date, series: [{key: 'total', color: '--c1'}], xlabel: (d) => day(d.date), aria: 'Tokens per day',
+    tip: (d) => [day(d.date, '%a %-d %b'), fmt(d.total) + ' tokens', fmt(d.output) + ' written by Claude', int(d.replies) + ' replies'], H: 220});
+  const a = bars('c-arts', daily, {x: (d) => d.date, series: [{key: 'artifacts_created', color: '--c2'}, {key: 'artifacts_edited', color: '--c4'}], yfmt: (v) => v, tickFilter: Number.isInteger,
+    xlabel: (d) => day(d.date), aria: 'Artifacts created and edited per day', tip: (d) => [day(d.date, '%a %-d %b'), (d.artifacts_created || 0) + ' created', (d.artifacts_edited || 0) + ' edited']});
+  a.svg.append('g').selectAll('text').data(daily.filter((d) => d.artifacts)).join('text').attr('class', 'lbl').attr('x', (d) => a.xs(d.date) + a.xs.bandwidth() / 2).attr('y', (d) => a.y(d.artifacts) - 3).attr('text-anchor', 'middle').text((d) => d.artifacts);
+  pairs('c-time', daily, 'active_minutes', 'app_minutes', 'Working time and time in the app per day');
+  const hourly = DATA.hourly || [];
+  bars('c-hourly', hourly, {x: (d) => d.hour, series: [{key: 'avg_minutes', color: '--c3'}], yfmt: (v) => v + 'm', xlabel: (d) => d.hour % 3 ? '' : hh(d.hour), aria: 'Average working minutes per hour of day',
+    tip: (d) => [hh(d.hour) + '–' + hh(d.hour + 1), d3.format('.1f')(d.avg_minutes) + ' min on average']});
+  const peak = d3.greatest(hourly, (h) => h.avg_minutes); document.getElementById('peak').textContent = peak ? hh(peak.hour) + '–' + hh(peak.hour + 1) : '—';
+  heat('c-heat', DATA.heat);
+  hbars('c-models', DATA.models, 'model', 'tokens', 'Tokens', fmt);
+  hbars('c-projects', DATA.projects, 'project', 'tokens', 'Tokens', fmt);
+  hbars('c-tools', DATA.tools, 'tool', 'calls', 'Calls', int);
+
+  const busiest = d3.greatest(daily, (d) => d.total), on = daily.filter((d) => d.active_minutes > 0);
+  const facts = [[d3.format('.0f')(T.output / 120000), "novels' worth of text Claude wrote (about 120,000 tokens per novel)"],
+    [busiest ? day(busiest.date, '%a %-d %b') + ' · ' + fmt(busiest.total) : '—', 'your biggest day'],
+    [d3.format('.0%')(T.subagent_tokens / T.tokens), 'of tokens went to helper agents working in the background'],
+    [on.length ? dur(d3.mean(on, (d) => d.active_minutes)) : '—', 'average working time on a day you used Claude'],
+    [fmt(T.tokens / Math.max(1, T.prompts)), 'tokens moved per prompt you typed'],
+    [int(T.tool_calls), 'tool calls: commands run, files edited, pages searched']];
+  document.getElementById('facts').replaceChildren(...facts.map(([v, t]) => { const p = el('p', {className: 'fact'}); p.append(el('b', {}, v), t); return p; }));
+  document.getElementById('sessions').replaceChildren(...DATA.sessions.map((s) => { const tr = el('tr');
+    tr.append(el('td', {}, s.title), el('td', {}, s.project), el('td', {className: 'num'}, fmt(s.tokens)), el('td', {className: 'num'}, int(s.replies)), el('td', {className: 'num'}, dur(s.active_minutes)), el('td', {}, day(s.started))); return tr; }));
+  document.getElementById('foot').textContent = 'Updated ' + T.generated.replace('T', ' ') + '.';
+}
+render();
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(render, 150); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', render);
+</script>
+</body>
+</html>
