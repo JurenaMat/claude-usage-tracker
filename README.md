@@ -4,6 +4,10 @@ A small, private dashboard of how you use Claude Code: tokens, time, artifacts, 
 
 Everything is read from the logs Claude Code already keeps on your computer. Nothing is uploaded anywhere.
 
+![The dashboard: tokens and artifacts per day, with totals for working time, time in the app, sessions and prompts](docs/dashboard.png)
+
+![The desktop widget: today's time in the app, working time and tokens, a 7-day chart and today's artifacts](docs/widget.webp)
+
 ## What you get
 
 - **A dashboard page** (`~/.claude/usage-tracker/dashboard.html`), refreshed every hour:
