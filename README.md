@@ -62,7 +62,7 @@ python3 ~/.claude/usage-tracker/build.py --html ~/Desktop/usage.html --no-titles
 | Path | What it is |
 |---|---|
 | `src/build.py` | Reads the logs and writes `claude-usage.json` (and the dashboard with `--html`) |
-| `src/dashboard.html` | Dashboard template; the data is inlined so the page works offline |
+| `src/dashboard.template.html` | Dashboard template; the data is inlined so the page works offline |
 | `src/focus-tick.sh` | Once-a-minute check for the time-in-the-app tracker |
 | `widget/index.jsx` | The Übersicht desktop widget |
 

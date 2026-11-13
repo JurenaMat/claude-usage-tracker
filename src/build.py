@@ -136,10 +136,17 @@ out = dict(
                  sessions=sum(1 for s in sess.values() if s['tok']), prompts=prompts, artifacts=len(all_art), artifacts_created=len(set().union(*art_created.values())) if art_created else 0, tool_calls=sum(tools.values()),
                  subagent_tokens=sub, days_active=sum(1 for d in days if d['total']), first_day=days[0]['date'], last_day=days[-1]['date'],
                  active_hours=round(act_total / 3600, 1), app_hours=round(sum(app_day.values()) / 60, 1), tracking_since=tracking_since, generated=datetime.now().isoformat(timespec='minutes'))])
-os.makedirs(os.path.dirname(os.path.abspath(OUT)), exist_ok=True)
-json.dump(out, open(OUT, 'w'))
+def write(path, text):
+    """Write via a temporary file, so a reader never sees a half-written or empty file."""
+    path = os.path.abspath(path); os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = f'{path}.{os.getpid()}.tmp'
+    with open(tmp, 'w') as f: f.write(text)
+    os.replace(tmp, path)
+
+write(OUT, json.dumps(out))
 if args.html:
-    tpl = open(os.path.join(HERE, 'dashboard.html')).read()
-    blob = json.dumps(out).replace('<', '\\u003c')
-    open(args.html, 'w').write(tpl.replace('/*__DATA__*/null', blob))
+    tpl = open(os.path.join(HERE, 'dashboard.template.html')).read()
+    if '/*__DATA__*/null' not in tpl:
+        sys.exit('dashboard.template.html is missing its data marker; reinstall Claude Usage Tracker.')
+    write(args.html, tpl.replace('/*__DATA__*/null', json.dumps(out).replace('<', '\\u003c')))
 print(json.dumps(out['totals'][0]))

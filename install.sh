@@ -15,7 +15,7 @@ PY=/usr/bin/python3
 
 echo "→ Copying files to $BOARD"
 mkdir -p "$BOARD" "$AGENTS"
-cp "$HERE/src/build.py" "$HERE/src/dashboard.html" "$HERE/src/focus-tick.sh" "$BOARD/"
+cp "$HERE/src/build.py" "$HERE/src/dashboard.template.html" "$HERE/src/focus-tick.sh" "$BOARD/"
 chmod +x "$BOARD/focus-tick.sh"
 
 # Upgrading from the earlier name, Claude Usage Board: retire the old jobs and widget, keep the tracked minutes.
